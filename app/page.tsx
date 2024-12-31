@@ -10,8 +10,8 @@ export default function Home() {
   return (
     <>
       <div className="grid grid-cols-1 lg:grid-cols-2">
-        <div className="flex items-center justify-center p-8 bg-[#0d1117] min-h-[200px]">
-          <div className="w-full max-w-4xl px-4">
+        <div className="flex items-center justify-center bg-[#0d1117] h-20">
+          <div className="w-full max-w-4xl">
             <Header />
           </div>
         </div>
