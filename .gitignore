@@ -4,6 +4,7 @@
 /node_modules
 /.pnp
 .pnp.js
+.yarn/install-state.gz
 
 # testing
 /coverage
@@ -11,13 +12,15 @@
 # next.js
 /.next/
 /out/
-
-# production
 /build
+.next
+next-env.d.ts
 
 # misc
 .DS_Store
 *.pem
+.env
+.env.*
 
 # debug
 npm-debug.log*
@@ -32,8 +35,28 @@ yarn-error.log*
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
 
 # IDE
 .vscode/
 .idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Logs
+logs
+*.log
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
