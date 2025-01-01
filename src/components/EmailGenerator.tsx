@@ -59,7 +59,7 @@ Project Manager Officer (PMO)`)
           className="text-center space-y-4"
         >
         <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white to-gray-400 bg-clip-text text-transparent px-4">
-          Cold Emails in a Blink
+          Cold Emails in a Blink of an Eye!
         </h1>
           <p className="text-gray-400 text-base md:text-lg px-4">
             Transform job requirements into compelling cold emails instantly.
