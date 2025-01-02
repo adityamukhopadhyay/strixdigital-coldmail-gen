@@ -1,23 +1,16 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/python/**/*.py",
-      "use": "@vercel/python"
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/next"
+  "functions": {
+    "api/python/generate_email.py": {
+      "runtime": "python3.9",
+      "memory": 1024,
+      "maxDuration": 10
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/generate-email",
-      "dest": "/api/python/generate_email"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/$1"
+      "dest": "/api/python/generate_email.py"
     }
   ]
 } 

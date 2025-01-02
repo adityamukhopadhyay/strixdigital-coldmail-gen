@@ -26,8 +26,14 @@ export async function POST(request: Request) {
 
     console.log('Forwarding request to Python backend...')
     
+    // Get the base URL from the request
+    const baseUrl = new URL(request.url).origin
+    const pythonEndpoint = `${baseUrl}/api/python/generate_email.py`
+    
+    console.log('Python endpoint:', pythonEndpoint)
+    
     // Forward the request to our Python backend
-    const response = await fetch(new URL('/api/python/generate_email', request.url).toString(), {
+    const response = await fetch(pythonEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -40,12 +46,17 @@ export async function POST(request: Request) {
 
     console.log('Received response from Python backend, status:', response.status)
 
+    // Log the raw response for debugging
+    const rawResponse = await response.text()
+    console.log('Raw response:', rawResponse)
+
     let data: { email?: string } | ErrorResponse
     try {
-      data = await response.json()
+      data = JSON.parse(rawResponse)
       console.log('Response data structure:', Object.keys(data))
     } catch (error) {
       console.error('Failed to parse Python backend response:', error)
+      console.error('Raw response that failed to parse:', rawResponse)
       throw new Error('Invalid response from server')
     }
 
