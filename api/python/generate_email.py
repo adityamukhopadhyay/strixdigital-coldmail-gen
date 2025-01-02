@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from typing import Dict, Any
-import groq.client
+import groq
 
 def log_error(error: Exception, context: str = "") -> None:
     """Log error details to stderr"""
@@ -28,7 +28,7 @@ class EmailGenerator:
             raise ValueError("GROQ_API_KEY environment variable is not set")
             
         try:
-            self.client = groq.client.Client(api_key=api_key)
+            self.client = groq.Groq(api_key=api_key)
             print("Successfully initialized Groq client", file=sys.stderr)
         except Exception as e:
             log_error(e, "Groq client initialization")
