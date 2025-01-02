@@ -1,21 +1,15 @@
-from http.server import BaseHTTPRequestHandler
 import json
 import os
 import sys
-import traceback
 from typing import Dict, Any
 from langchain_groq import ChatGroq
 from langchain_core.prompts import PromptTemplate
-from langchain_core.output_parsers import JsonOutputParser
-from langchain_core.exceptions import OutputParserException
 
 def log_error(error: Exception, context: str = "") -> None:
     """Log error details to stderr"""
     print(f"\nERROR in {context}:", file=sys.stderr)
     print(f"Type: {type(error).__name__}", file=sys.stderr)
     print(f"Message: {str(error)}", file=sys.stderr)
-    print("Traceback:", file=sys.stderr)
-    traceback.print_exc(file=sys.stderr)
     print("\n", file=sys.stderr)
 
 def cors_headers() -> Dict[str, str]:
@@ -64,8 +58,8 @@ class EmailGenerator:
             print("Received response from Groq", file=sys.stderr)
             
             try:
-                json_parser = JsonOutputParser()
-                parsed_data = json_parser.parse(res.content)
+                # Try to parse the response as JSON
+                parsed_data = json.loads(res.content)
                 print("Successfully parsed job details", file=sys.stderr)
                 return parsed_data
             except Exception as e:
