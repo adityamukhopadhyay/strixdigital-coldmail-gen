@@ -3,7 +3,7 @@ import json
 import os
 import sys
 from typing import Dict, Any
-import groq
+from openai import OpenAI
 
 def log_error(error: Exception, context: str = "") -> None:
     """Log error details to stderr"""
@@ -23,25 +23,20 @@ def cors_headers() -> Dict[str, str]:
 class EmailGenerator:
     def __init__(self):
         print("Initializing EmailGenerator...", file=sys.stderr)
-        
-        # Clear any existing proxy settings
-        if 'HTTP_PROXY' in os.environ:
-            del os.environ['HTTP_PROXY']
-        if 'HTTPS_PROXY' in os.environ:
-            del os.environ['HTTPS_PROXY']
-        
-        # Get API key
         api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY environment variable is not set")
             
         try:
-            # Initialize client with just the API key
-            self.client = groq.Client(api_key=api_key)
-            print("Successfully initialized Groq client", file=sys.stderr)
+            # Initialize OpenAI client with Groq's API base URL
+            self.client = OpenAI(
+                api_key=api_key,
+                base_url="https://api.groq.com/openai/v1"
+            )
+            print("Successfully initialized client", file=sys.stderr)
         except Exception as e:
-            log_error(e, "Groq client initialization")
-            raise ValueError(f"Failed to initialize Groq client: {str(e)}")
+            log_error(e, "Client initialization")
+            raise ValueError(f"Failed to initialize client: {str(e)}")
 
     def extract_job_details(self, job_url: str) -> Dict[str, Any]:
         print(f"\nExtracting job details from: {job_url}", file=sys.stderr)
@@ -56,14 +51,14 @@ class EmailGenerator:
             ### VALID JSON (NO PREAMBLE):
             """
             
-            print("Sending job details extraction request to Groq...", file=sys.stderr)
+            print("Sending job details extraction request...", file=sys.stderr)
             completion = self.client.chat.completions.create(
                 model="mixtral-8x7b-32768",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0
             )
             response_content = completion.choices[0].message.content
-            print("Received response from Groq", file=sys.stderr)
+            print("Received response", file=sys.stderr)
             
             try:
                 # Try to parse the response as JSON
@@ -112,7 +107,7 @@ class EmailGenerator:
             ### EMAIL (NO PREAMBLE):
             """
             
-            print("Sending email generation request to Groq...", file=sys.stderr)
+            print("Sending email generation request...", file=sys.stderr)
             completion = self.client.chat.completions.create(
                 model="mixtral-8x7b-32768",
                 messages=[{"role": "user", "content": prompt}],
