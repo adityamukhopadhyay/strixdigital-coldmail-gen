@@ -31,7 +31,8 @@ class EmailGenerator:
             self.llm = ChatGroq(
                 temperature=0, 
                 groq_api_key=api_key,
-                model_name="llama-3.1-70b-versatile"
+                model_name="llama-3.1-70b-versatile",
+                callbacks=None  # Explicitly disable callbacks
             )
             print("Successfully initialized Groq LLM", file=sys.stderr)
         except Exception as e:
@@ -54,7 +55,7 @@ class EmailGenerator:
             )
             chain_extract = prompt_extract | self.llm
             print("Sending job details extraction request to Groq...", file=sys.stderr)
-            res = chain_extract.invoke(input={"job_url": job_url})
+            res = chain_extract.invoke(input={"job_url": job_url}, config={"callbacks": None})
             print("Received response from Groq", file=sys.stderr)
             
             try:
@@ -110,7 +111,7 @@ class EmailGenerator:
             res = chain_email.invoke({
                 "job_details": str(job_details), 
                 "portfolio_links": ", ".join(portfolio_links)
-            })
+            }, config={"callbacks": None})
             print("Successfully generated email content", file=sys.stderr)
             return res.content
             
