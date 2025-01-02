@@ -94,7 +94,7 @@ class EmailGenerator:
             5. Maintains a professional yet engaging tone
             6. Ends with a clear call to action for a meeting/call
 
-            Remember: You are Aditya Mukhopadhyay, PMO at Strix Digital.
+            Remember: You are Aditya Mukhopadhyay, PMO at Strix Digital. Email: aditya@strixdigital.in, Phone: +91-9981861977
             Do not provide any preamble, just the email content.
             
             ### EMAIL (NO PREAMBLE):
