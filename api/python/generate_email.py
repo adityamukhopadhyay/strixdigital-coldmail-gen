@@ -133,14 +133,9 @@ class handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         print("\n=== Starting new request ===", file=sys.stderr)
+        response_sent = False
         try:
-            # Send response headers first
-            self.send_response(200)
-            for key, value in cors_headers().items():
-                self.send_header(key, value)
-            self.end_headers()
-
-            # Read and parse request body
+            # Read and parse request body first
             content_length = int(self.headers.get('Content-Length', 0))
             print(f"Request content length: {content_length}", file=sys.stderr)
             
@@ -164,14 +159,28 @@ class handler(BaseHTTPRequestHandler):
             print(f"Generated email content length: {len(email_content)}", file=sys.stderr)
 
             # Send successful response
+            self.send_response(200)
+            for key, value in cors_headers().items():
+                self.send_header(key, value)
+            self.end_headers()
+            response_sent = True
+
             response = {'email': email_content}
             self.wfile.write(json.dumps(response).encode())
             print("Successfully sent response", file=sys.stderr)
-            
+
         except Exception as e:
             log_error(e, "Request handler")
+            
+            if not response_sent:
+                self.send_response(500)
+                for key, value in cors_headers().items():
+                    self.send_header(key, value)
+                self.end_headers()
+            
             error_response = {
                 'error': str(e),
                 'type': type(e).__name__
             }
-            self.wfile.write(json.dumps(error_response).encode()) 
+            self.wfile.write(json.dumps(error_response).encode())
+            print("Sent error response", file=sys.stderr) 

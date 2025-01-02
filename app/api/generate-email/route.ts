@@ -4,6 +4,11 @@ interface JobRequest {
   job_link: string;
 }
 
+interface ErrorResponse {
+  error: string;
+  type?: string;
+}
+
 export async function POST(request: Request) {
   try {
     console.log('Starting email generation request...')
@@ -35,7 +40,7 @@ export async function POST(request: Request) {
 
     console.log('Received response from Python backend, status:', response.status)
 
-    let data
+    let data: { email?: string } | ErrorResponse
     try {
       data = await response.json()
       console.log('Response data structure:', Object.keys(data))
@@ -49,33 +54,39 @@ export async function POST(request: Request) {
         status: response.status,
         data: data
       })
-      throw new Error(data.error || 'Failed to generate email')
+      
+      // If we have a structured error response from Python
+      if ('error' in data) {
+        throw new Error(data.error)
+      }
+      
+      throw new Error('Failed to generate email')
     }
 
-    if (!data.email) {
+    if (!('email' in data) || !data.email) {
       console.error('Invalid response structure from Python backend:', data)
       throw new Error('Invalid response format from server')
     }
 
     console.log('Successfully generated email, length:', data.email.length)
-    return NextResponse.json(data)
+    return NextResponse.json({ email: data.email })
   } catch (error: unknown) {
-    const errorObj: Record<string, string> = {
+    console.error('Error in generate-email route:', {
       name: error instanceof Error ? error.name : 'UnknownError',
       message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack || 'No stack trace' : 'No stack trace'
-    }
-    
-    console.error('Error in generate-email route:', errorObj)
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    })
     
     // Determine appropriate error message
     let errorMessage = 'Failed to generate email'
     if (error instanceof Error) {
       errorMessage = error.message
-      if (error.message.includes('fetch')) {
+      if (error.message.includes('fetch') || error.message.includes('network')) {
         errorMessage = 'Connection error: Please try again'
-      } else if (error.message.includes('parse')) {
+      } else if (error.message.includes('parse') || error.message.includes('invalid')) {
         errorMessage = 'Server error: Invalid response format'
+      } else if (error.message.includes('GROQ_API_KEY')) {
+        errorMessage = 'Server configuration error: Please contact support'
       }
     }
 
