@@ -23,11 +23,20 @@ def cors_headers() -> Dict[str, str]:
 class EmailGenerator:
     def __init__(self):
         print("Initializing EmailGenerator...", file=sys.stderr)
+        
+        # Clear any existing proxy settings
+        if 'HTTP_PROXY' in os.environ:
+            del os.environ['HTTP_PROXY']
+        if 'HTTPS_PROXY' in os.environ:
+            del os.environ['HTTPS_PROXY']
+        
+        # Get API key
         api_key = os.environ.get("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY environment variable is not set")
             
         try:
+            # Initialize client with minimal configuration
             self.client = Groq(api_key=api_key)
             print("Successfully initialized Groq client", file=sys.stderr)
         except Exception as e:
