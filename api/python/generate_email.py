@@ -2,8 +2,7 @@ import json
 import os
 import sys
 from typing import Dict, Any
-from langchain_groq import ChatGroq
-from langchain_core.prompts import PromptTemplate
+import groq
 
 def log_error(error: Exception, context: str = "") -> None:
     """Log error details to stderr"""
@@ -28,44 +27,42 @@ class EmailGenerator:
             raise ValueError("GROQ_API_KEY environment variable is not set")
             
         try:
-            self.llm = ChatGroq(
-                temperature=0, 
-                groq_api_key=api_key,
-                model_name="llama-3.1-70b-versatile",
-                callbacks=None  # Explicitly disable callbacks
-            )
-            print("Successfully initialized Groq LLM", file=sys.stderr)
+            self.client = groq.Groq(api_key=api_key)
+            print("Successfully initialized Groq client", file=sys.stderr)
         except Exception as e:
-            log_error(e, "LLM initialization")
-            raise ValueError(f"Failed to initialize LLM: {str(e)}")
+            log_error(e, "Groq client initialization")
+            raise ValueError(f"Failed to initialize Groq client: {str(e)}")
 
     def extract_job_details(self, job_url: str) -> Dict[str, Any]:
         print(f"\nExtracting job details from: {job_url}", file=sys.stderr)
         try:
-            prompt_extract = PromptTemplate.from_template(
-                """
-                ### JOB URL:
-                {job_url}
-                ### INSTRUCTION:
-                The provided URL is for a job posting. Extract the key details and return them in JSON format 
-                containing the following keys: `role`, `company`, `experience`, `skills` and `description`.
-                Only return the valid JSON.
-                ### VALID JSON (NO PREAMBLE):
-                """
-            )
-            chain_extract = prompt_extract | self.llm
+            prompt = f"""
+            ### JOB URL:
+            {job_url}
+            ### INSTRUCTION:
+            The provided URL is for a job posting. Extract the key details and return them in JSON format 
+            containing the following keys: `role`, `company`, `experience`, `skills` and `description`.
+            Only return the valid JSON.
+            ### VALID JSON (NO PREAMBLE):
+            """
+            
             print("Sending job details extraction request to Groq...", file=sys.stderr)
-            res = chain_extract.invoke(input={"job_url": job_url}, config={"callbacks": None})
+            completion = self.client.chat.completions.create(
+                model="llama-3.1-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0
+            )
+            response_content = completion.choices[0].message.content
             print("Received response from Groq", file=sys.stderr)
             
             try:
                 # Try to parse the response as JSON
-                parsed_data = json.loads(res.content)
+                parsed_data = json.loads(response_content)
                 print("Successfully parsed job details", file=sys.stderr)
                 return parsed_data
             except Exception as e:
                 log_error(e, "JSON parsing")
-                print(f"Raw response content: {res.content}", file=sys.stderr)
+                print(f"Raw response content: {response_content}", file=sys.stderr)
                 raise ValueError(f"Unable to parse job details: {str(e)}")
                 
         except Exception as e:
@@ -82,38 +79,38 @@ class EmailGenerator:
                 "Enterprise Software: https://strixdigital.in/portfolio/enterprise"
             ]
 
-            prompt_email = PromptTemplate.from_template(
-                """
-                ### JOB DETAILS:
-                {job_details}
+            prompt = f"""
+            ### JOB DETAILS:
+            {str(job_details)}
 
-                ### INSTRUCTION:
-                You are Aditya Mukhopadhyay, Project Management Officer (PMO) at Strix Digital. 
-                Strix Digital is a leading AI & Software Consulting company specializing in cutting-edge 
-                technology solutions and digital transformation.
+            ### INSTRUCTION:
+            You are Aditya Mukhopadhyay, Project Management Officer (PMO) at Strix Digital. 
+            Strix Digital is a leading AI & Software Consulting company specializing in cutting-edge 
+            technology solutions and digital transformation.
 
-                Write a compelling cold email for this job opportunity that:
-                1. Introduces Strix Digital and its expertise
-                2. Highlights how Strix Digital can address their specific needs based on the job requirements
-                3. Mentions our work with notable clients like Indian Army, Tata Digital, Yes Bank, HDFC Bank, and General Mills
-                4. Includes 2-3 most relevant portfolio links from: {portfolio_links}
-                5. Maintains a professional yet engaging tone
-                6. Ends with a clear call to action for a meeting/call
+            Write a compelling cold email for this job opportunity that:
+            1. Introduces Strix Digital and its expertise
+            2. Highlights how Strix Digital can address their specific needs based on the job requirements
+            3. Mentions our work with notable clients like Indian Army, Tata Digital, Yes Bank, HDFC Bank, and General Mills
+            4. Includes 2-3 most relevant portfolio links from: {", ".join(portfolio_links)}
+            5. Maintains a professional yet engaging tone
+            6. Ends with a clear call to action for a meeting/call
 
-                Remember: You are Aditya Mukhopadhyay, PMO at Strix Digital.
-                Do not provide any preamble, just the email content.
-                
-                ### EMAIL (NO PREAMBLE):
-                """
-            )
+            Remember: You are Aditya Mukhopadhyay, PMO at Strix Digital.
+            Do not provide any preamble, just the email content.
+            
+            ### EMAIL (NO PREAMBLE):
+            """
+            
             print("Sending email generation request to Groq...", file=sys.stderr)
-            chain_email = prompt_email | self.llm
-            res = chain_email.invoke({
-                "job_details": str(job_details), 
-                "portfolio_links": ", ".join(portfolio_links)
-            }, config={"callbacks": None})
+            completion = self.client.chat.completions.create(
+                model="llama-3.1-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0
+            )
+            email_content = completion.choices[0].message.content
             print("Successfully generated email content", file=sys.stderr)
-            return res.content
+            return email_content
             
         except Exception as e:
             log_error(e, "Email generation")
