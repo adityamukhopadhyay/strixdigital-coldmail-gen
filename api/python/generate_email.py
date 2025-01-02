@@ -3,7 +3,8 @@ import json
 import os
 import sys
 from typing import Dict, Any
-from openai import OpenAI
+import asyncio
+from .config import create_client
 
 def log_error(error: Exception, context: str = "") -> None:
     """Log error details to stderr"""
@@ -23,22 +24,14 @@ def cors_headers() -> Dict[str, str]:
 class EmailGenerator:
     def __init__(self):
         print("Initializing EmailGenerator...", file=sys.stderr)
-        api_key = os.environ.get("GROQ_API_KEY")
-        if not api_key:
-            raise ValueError("GROQ_API_KEY environment variable is not set")
-            
         try:
-            # Initialize OpenAI client with Groq's API base URL
-            self.client = OpenAI(
-                api_key=api_key,
-                base_url="https://api.groq.com/openai/v1"
-            )
+            self.client = create_client()
             print("Successfully initialized client", file=sys.stderr)
         except Exception as e:
             log_error(e, "Client initialization")
             raise ValueError(f"Failed to initialize client: {str(e)}")
 
-    def extract_job_details(self, job_url: str) -> Dict[str, Any]:
+    async def extract_job_details(self, job_url: str) -> Dict[str, Any]:
         print(f"\nExtracting job details from: {job_url}", file=sys.stderr)
         try:
             prompt = f"""
@@ -52,7 +45,7 @@ class EmailGenerator:
             """
             
             print("Sending job details extraction request...", file=sys.stderr)
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 model="mixtral-8x7b-32768",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0
@@ -74,7 +67,7 @@ class EmailGenerator:
             log_error(e, "Job details extraction")
             raise ValueError(f"Failed to extract job details: {str(e)}")
 
-    def generate_email(self, job_details: Dict[str, Any]) -> str:
+    async def generate_email(self, job_details: Dict[str, Any]) -> str:
         print("\nGenerating email from job details...", file=sys.stderr)
         try:
             portfolio_links = [
@@ -108,7 +101,7 @@ class EmailGenerator:
             """
             
             print("Sending email generation request...", file=sys.stderr)
-            completion = self.client.chat.completions.create(
+            completion = await self.client.chat.completions.create(
                 model="mixtral-8x7b-32768",
                 messages=[{"role": "user", "content": prompt}],
                 temperature=0
@@ -148,11 +141,17 @@ class handler(BaseHTTPRequestHandler):
             # Initialize generator and process request
             generator = EmailGenerator()
             
-            job_details = generator.extract_job_details(data['job_link'])
-            print(f"Extracted job details: {job_details}", file=sys.stderr)
-            
-            email_content = generator.generate_email(job_details)
-            print(f"Generated email content length: {len(email_content)}", file=sys.stderr)
+            # Run async operations
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                job_details = loop.run_until_complete(generator.extract_job_details(data['job_link']))
+                print(f"Extracted job details: {job_details}", file=sys.stderr)
+                
+                email_content = loop.run_until_complete(generator.generate_email(job_details))
+                print(f"Generated email content length: {len(email_content)}", file=sys.stderr)
+            finally:
+                loop.close()
 
             # Send successful response
             self.send_response(200)
