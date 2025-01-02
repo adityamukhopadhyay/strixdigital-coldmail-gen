@@ -59,12 +59,14 @@ export async function POST(request: Request) {
 
     console.log('Successfully generated email, length:', data.email.length)
     return NextResponse.json(data)
-  } catch (error) {
-    console.error('Error in generate-email route:', {
-      name: error.name,
-      message: error.message,
-      stack: error.stack
-    })
+  } catch (error: unknown) {
+    const errorObj: Record<string, string> = {
+      name: error instanceof Error ? error.name : 'UnknownError',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack || 'No stack trace' : 'No stack trace'
+    }
+    
+    console.error('Error in generate-email route:', errorObj)
     
     // Determine appropriate error message
     let errorMessage = 'Failed to generate email'
