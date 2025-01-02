@@ -24,15 +24,21 @@ export async function POST(request: Request) {
       body: JSON.stringify(body),
     })
 
+    const data = await response.json()
+
     if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to generate email')
+      console.error('Python backend error:', data)
+      throw new Error(data.error || 'Failed to generate email')
     }
 
-    const data = await response.json()
+    if (!data.email) {
+      console.error('Invalid response from Python backend:', data)
+      throw new Error('Invalid response from server')
+    }
+
     return NextResponse.json(data)
   } catch (error) {
-    console.error('Error:', error)
+    console.error('Error in generate-email route:', error)
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Failed to generate email' },
       { status: 500 }
