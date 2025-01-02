@@ -1,3 +1,4 @@
+from http.server import BaseHTTPRequestHandler
 import json
 import os
 import sys
@@ -116,54 +117,59 @@ class EmailGenerator:
             log_error(e, "Email generation")
             raise ValueError(f"Failed to generate email: {str(e)}")
 
-def handle(request):
-    """Main handler function for Vercel"""
-    print("\n=== Starting new request ===", file=sys.stderr)
-    
-    # Handle OPTIONS request
-    if request.method == "OPTIONS":
-        return {
-            "statusCode": 200,
-            "headers": cors_headers(),
-            "body": ""
-        }
-    
-    try:
-        # Parse request body
+class handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        self.send_response(200)
+        for key, value in cors_headers().items():
+            self.send_header(key, value)
+        self.end_headers()
+
+    def do_POST(self):
+        print("\n=== Starting new request ===", file=sys.stderr)
         try:
-            body = json.loads(request.body)
-            print(f"Parsed request data: {body}", file=sys.stderr)
+            # Read request body
+            content_length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(content_length)
+            
+            try:
+                data = json.loads(body)
+                print(f"Parsed request data: {data}", file=sys.stderr)
+            except Exception as e:
+                log_error(e, "Request body parsing")
+                raise ValueError("Invalid request body")
+            
+            if not data.get('job_link'):
+                raise ValueError("Job link is required")
+
+            # Initialize generator and process request
+            generator = EmailGenerator()
+            
+            job_details = generator.extract_job_details(data['job_link'])
+            print(f"Extracted job details: {job_details}", file=sys.stderr)
+            
+            email_content = generator.generate_email(job_details)
+            print(f"Generated email content length: {len(email_content)}", file=sys.stderr)
+
+            # Send successful response
+            self.send_response(200)
+            for key, value in cors_headers().items():
+                self.send_header(key, value)
+            self.end_headers()
+
+            response = {'email': email_content}
+            self.wfile.write(json.dumps(response).encode())
+            print("Successfully sent response", file=sys.stderr)
+
         except Exception as e:
-            log_error(e, "Request body parsing")
-            raise ValueError("Invalid request body")
-        
-        if not body.get('job_link'):
-            raise ValueError("Job link is required")
-
-        # Initialize generator and process request
-        generator = EmailGenerator()
-        
-        job_details = generator.extract_job_details(body['job_link'])
-        print(f"Extracted job details: {job_details}", file=sys.stderr)
-        
-        email_content = generator.generate_email(job_details)
-        print(f"Generated email content length: {len(email_content)}", file=sys.stderr)
-
-        # Return successful response
-        return {
-            "statusCode": 200,
-            "headers": cors_headers(),
-            "body": json.dumps({'email': email_content})
-        }
-
-    except Exception as e:
-        log_error(e, "Request handler")
-        
-        return {
-            "statusCode": 500,
-            "headers": cors_headers(),
-            "body": json.dumps({
+            log_error(e, "Request handler")
+            
+            self.send_response(500)
+            for key, value in cors_headers().items():
+                self.send_header(key, value)
+            self.end_headers()
+            
+            error_response = {
                 'error': str(e),
                 'type': type(e).__name__
-            })
-        } 
+            }
+            self.wfile.write(json.dumps(error_response).encode()) 
