@@ -12,7 +12,7 @@ class EmailGenerator:
         self.llm = ChatGroq(
             temperature=0, 
             groq_api_key=os.getenv("GROQ_API_KEY"), 
-            model_name="llama-3.1-70b-versatile"
+            model_name="mixtral-8x7b-32768"
         )
 
     def extract_job_details(self, job_url):
